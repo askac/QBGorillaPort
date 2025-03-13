@@ -13,18 +13,18 @@ banana_ega_data = {
         202116096,471604224,943208448,943208448,
         943208448,471604224,202116096,0
     ],
-    "Up": [
-        262153,
-        4063232, 4063294, 8323072, 8323199,
-        -2130771968, -2130738945, -2134835200, -2134802239
-    ],
     "Down": [
-        262153,
+        262153, 
         -2134835200, -2134802239, -2130771968, -2130738945,
         8323072, 8323199, 4063232, 4063294
     ],
+    "Up": [
+        262153, 
+        4063232, 4063294, 8323072, 8323199,
+        -2130771968, -2130738945, -2134835200, -2134802239
+    ],
     "Right": [
-        458758,
+        458758, 
         -1061109760, -522133504, 1886416896, 1886416896,
         1886416896, -522133504, -1061109760, 0
     ]
@@ -88,11 +88,63 @@ def invert_32bits_fast(value: int) -> int:
 
     # Recombine into a single 32-bit value
     return (nb3 << 24) | (nb2 << 16) | (nb1 << 8) | nb0
+'''
+def decode_ega_okok(data_list) -> pygame.Surface:
+    bytes_le = data_list[0].to_bytes(4, byteorder='little', signed=False)
+    width, height = struct.unpack('<HH', bytes_le)    
+    print(f"Detected {width}x{height}")
+    print(f"Max pixels {8*(len(data_list)-1)}")
+    max_pixels = 8*(len(data_list)-1)
+    total_pixels = width * height
 
+    pwidth = 8 * ((width + 7) // 8) # ceil(a/b) = (a + b - 1) // b
+    lines = max_pixels // pwidth
+    print(f"PixelPerLins={pwidth}, TotalLines={lines}")
+
+    import math
+    import pygame
+
+    if total_pixels > 8*(len(data_list)-1):
+        surf = pygame.Surface((width, height))
+        surf.fill((255,0,255))  # bright magenta => invalid
+        return surf
+
+    combined_bits = 0
+    totalBits=0
+    for i in range(1,len(data_list)):
+        val_32u=invert_32bits_fast(data_list[i] & 0xffffffff)
+        combined_bits |= val_32u << totalBits
+        totalBits = totalBits + 32
+
+    for x in range(max_pixels*4):
+        b0 = 1 if (combined_bits & (1 << x)) else 0
+        print(f'{b0}',end="")
+        if((x%(pwidth*4))==((pwidth*4)-1)):
+            print("")
+
+    surf = pygame.Surface((width, height), pygame.SRCALPHA)
+    surf.fill((0,0,0,255))  #Fill blank, opacity
+
+    print(f"pixels_per_line={pwidth} width={width}")
+    for i in range(total_pixels):
+        x = i % width
+        y = i // width
+        pi = x + 4*pwidth*y
+        p0 = 1 if (combined_bits & (1 << pi)) else 0
+        p1 = 1 if (combined_bits & (1 << (pi + pwidth))) else 0
+        p2 = 1 if (combined_bits & (1 << (pi + pwidth*2))) else 0
+        p3 = 1 if (combined_bits & (1 << (pi + pwidth*3))) else 0
+        color_index = (p0 << 0) | (p1 << 1) | (p2 << 2) | (p3 << 3)
+        col = EGA_PALETTE[color_index]
+        if(0 == color_index):
+            surf.set_at((x,y), col + (0,))
+        else:
+            surf.set_at((x,y), col + (255,))
+
+    return surf
+'''
 def decode_ega(
-    data_list: list[int],
-    requested_width: int = None,
-    requested_height: int = None
+    data_list: list[int]
 ) -> pygame.Surface:
     """
     Decodes EGA banana (or similar) data to a pygame.Surface using a 4-plane approach.
@@ -117,12 +169,6 @@ def decode_ega(
     first_u32 = data_list[0] & 0xFFFFFFFF
     bytes_le = first_u32.to_bytes(4, byteorder='little', signed=False)
     w, h = struct.unpack('<HH', bytes_le)
-
-    # If user provided explicit width/height, override
-    if requested_width is not None:
-        w = requested_width
-    if requested_height is not None:
-        h = requested_height
 
     # The rest of the data (from index=1 onward) is the pixel planes
     # We compute the total number of bits: 32 * (len(data_list)-1)
@@ -150,7 +196,7 @@ def decode_ega(
 
     # Create the output surface
     surf = pygame.Surface((w, h), pygame.SRCALPHA)
-    surf.fill((0,0,0,0))  # transparent background
+    surf.fill((0,0,0,255))  # transparent background
 
     # For each pixel, we figure out which bits belong to that pixel across the 4 planes
     # The code uses x + pwidth*(plane_index) + pwidth*lines*(y) arrangement
@@ -162,7 +208,7 @@ def decode_ega(
         x = i % w
         y = i // w
         # pi is the bit index for plane0
-        pi = x + pwidth * y
+        pi = x + pwidth*4 * y
 
         p0 = 1 if (combined_bits & (1 << pi)) else 0
         p1 = 1 if (combined_bits & (1 << (pi + pwidth))) else 0
@@ -171,7 +217,7 @@ def decode_ega(
 
         color_index = (p0 << 0) | (p1 << 1) | (p2 << 2) | (p3 << 3)
         col = EGA_PALETTE[color_index]
-        surf.set_at((x, y), col + (255,))
+        surf.set_at((x, y), col + (255 if 0 != color_index else 0,))
 
     return surf
 
@@ -189,13 +235,15 @@ class Graphics:
         self.ega_surfaces = {}
         self.banana_color = (255, 255, 0)  # Yellow
         self.outline_color = (0, 0, 0)     # Black
+        self.add_ega_surface('banana_left', banana_ega_data['Left'], 10)
+        self.add_ega_surface('banana_right', banana_ega_data['Right'], 10)
+        self.add_ega_surface('banana_up', banana_ega_data['Up'], 10)
+        self.add_ega_surface('banana_down', banana_ega_data['Down'], 10)
 
     def add_ega_surface(
         self,
         key: str,
         data_list: list[int],
-        requested_width: int = None,
-        requested_height: int = None,
         scale_factor: int = 1
     ):
         """
@@ -206,11 +254,12 @@ class Graphics:
         :param requested_height: Optional override for height.
         :param scale_factor: How much to scale the resulting surface.
         """
-        decoded_surf = decode_ega(data_list, requested_width, requested_height)
+        decoded_surf = decode_ega(data_list)
+        w = decoded_surf.get_width()
+        h = decoded_surf.get_height()
         if scale_factor > 1:
-            w = decoded_surf.get_width()
-            h = decoded_surf.get_height()
             decoded_surf = pygame.transform.scale(decoded_surf, (w * scale_factor, h * scale_factor))
+        #print(f"Add new banana[{key}]  wxh={w}x{h}  scale={scale_factor}")
         self.ega_surfaces[key] = decoded_surf
 
     

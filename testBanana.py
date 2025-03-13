@@ -12,7 +12,7 @@ from physics import plot_shot
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-GRAVITY = 9.8
+GRAVITY = 98
 WIND = 0.0  # No wind for now
 
 def main():
@@ -65,14 +65,12 @@ def main():
         bananas = [b for b in bananas if b.alive]
 
         # Render everything
-        screen.fill((135, 206, 235))  # Sky blue
+        #screen.fill((135, 206, 235))  # Sky blue
+        screen.fill((85, 85, 255))
 
         # Draw all bananas
         for b in bananas:
-            if use_ega:
-                b.draw(screen, graphics, "banana_right")  # EGA banana
-            else:
-                b.draw(screen, graphics, b.rotation_step % 4)  # CGA rotation
+            b.draw(screen, graphics, 'banana_left')  # EGA banana
 
         # Debug info
         debug_text = f"Bananas: {len(bananas)} | Mode: {'EGA' if use_ega else 'CGA'}"

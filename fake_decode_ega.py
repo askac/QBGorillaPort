@@ -2,6 +2,9 @@
 import pygame
 import struct
 
+from graphics import Graphics
+from graphics import decode_ega as decodeEga
+
 # EGA palette (16 colors)
 EGA_PALETTE = [
     (0,0,0),       # 0 black
@@ -99,7 +102,7 @@ def invert_32bits_fast(value):
     return result
 
 
-def decode_ega(data_list, width, height) -> pygame.Surface:
+def decode_ega(data_list) -> pygame.Surface:
     bytes_le = data_list[0].to_bytes(4, byteorder='little', signed=False)
     width, height = struct.unpack('<HH', bytes_le)    
     print(f"Detected {width}x{height}")
@@ -133,7 +136,7 @@ def decode_ega(data_list, width, height) -> pygame.Surface:
             print("")
 
     surf = pygame.Surface((width, height), pygame.SRCALPHA)
-    surf.fill((0,0,0,255))  # 先都填黑
+    surf.fill((0,0,0,255))  #Fill blank, opacity
 
     print(f"pixels_per_line={pwidth} width={width}")
     for i in range(total_pixels):
@@ -153,7 +156,7 @@ def decode_ega(data_list, width, height) -> pygame.Surface:
 def main():
     pygame.init()
     pygame.display.set_caption("EGA Banana Decode Test (Scaled)")
-    
+
     # 參數：放大倍數
     SCALE = 4
 
@@ -162,6 +165,8 @@ def main():
     screen_width = 1200
     screen_height = 700
     screen = pygame.display.set_mode((screen_width, screen_height))
+
+    graphics = Graphics(screen)
 
     font = pygame.font.SysFont(None, 24)
     clock = pygame.time.Clock()
@@ -172,8 +177,9 @@ def main():
     for orient in orientations:
         data_list = banana_ega_data[orient]
         for dims in dim_candidates:
-            w,h = dims
-            surf = decode_ega(data_list, w, h)
+            surf = decodeEga(data_list)#decode_ega(data_list)
+            w = surf.get_width()
+            h = surf.get_height()
             # 產生放大後版本
             big_surf = pygame.transform.scale(surf, (w*SCALE, h*SCALE))
             banana_surfaces[(orient, dims)] = big_surf
@@ -205,6 +211,8 @@ def main():
                 x_draw = c*150 + 100
                 y_draw = r*150 + 70
                 screen.blit(big_surf, (x_draw, y_draw))
+
+        #graphics.draw_banana(100, 100, "banana_left")
 
         pygame.display.flip()
 

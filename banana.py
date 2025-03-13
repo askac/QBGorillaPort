@@ -20,7 +20,8 @@ class Banana:
         angle_deg: float,
         velocity: float,
         gravity: float,
-        wind: float
+        wind: float,
+        rpm: float = 200.0
     ):
         """
         :param x: Initial X position of the banana.
@@ -36,6 +37,7 @@ class Banana:
         self.velocity = velocity
         self.gravity = gravity
         self.wind = wind
+        self.rpm = rpm
 
         # Convert angle to radians
         self.angle_rad = math.radians(angle_deg)
@@ -46,7 +48,6 @@ class Banana:
 
         # Flight state
         self.alive = True   # Banana will disappear when it hits ground or goes out of screen
-        self.rotation_step = 0  # Used to choose among the 4 banana orientations
         self.dt_acc = 0.0      # Accumulated time used for flight
 
         # For drawing the banana; we can reuse the Graphics class
@@ -98,9 +99,19 @@ class Banana:
         if not self.alive:
             return
 
+        states_per_second = 4 * (self.rpm / 60.0)
+        rotation_index = int(self.dt_acc * states_per_second) % 4
+
         # Determine orientation index (CGA uses rotation index)
         if orientation is None:
-            orientation = self.rotation_step % 4  # Default rotation for CGA
-    
+            orientation = rotation_index % 4  # Default rotation for CGA
+            graphics.draw_banana(self.x, self.y, orientation)
+        else:
+            direction=["banana_left", "banana_up", "banana_right", "banana_down"]
+            graphics.draw_banana(self.x, self.y, direction[rotation_index])
+            #graphics.draw_banana(self.x, self.y, direction[int(self.dt_acc) % 4])
+
+        #self.rotation_step = self.rotation_step % 4 + 1
+        #print(f"[{self.rotation_step}]")
         # Draw banana using the graphics system
-        graphics.draw_banana(self.x, self.y, orientation)
+        #graphics.draw_banana(self.x, self.y, orientation)
