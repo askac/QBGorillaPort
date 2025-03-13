@@ -226,7 +226,7 @@ class Graphics:
     Class for handling game graphics (no CGA/EGA modes, only modern screen usage).
     """
 
-    def __init__(self, screen):
+    def __init__(self, screen, scale_factor=1):
         """
         Initialize the graphics module.
         :param screen: The main pygame surface where we draw.
@@ -235,10 +235,10 @@ class Graphics:
         self.ega_surfaces = {}
         self.banana_color = (255, 255, 0)  # Yellow
         self.outline_color = (0, 0, 0)     # Black
-        self.add_ega_surface('banana_left', banana_ega_data['Left'], 10)
-        self.add_ega_surface('banana_right', banana_ega_data['Right'], 10)
-        self.add_ega_surface('banana_up', banana_ega_data['Up'], 10)
-        self.add_ega_surface('banana_down', banana_ega_data['Down'], 10)
+        self.add_ega_surface('banana_left', banana_ega_data['Left'], scale_factor)
+        self.add_ega_surface('banana_right', banana_ega_data['Right'], scale_factor)
+        self.add_ega_surface('banana_up', banana_ega_data['Up'], scale_factor)
+        self.add_ega_surface('banana_down', banana_ega_data['Down'], scale_factor)
 
     def add_ega_surface(
         self,
