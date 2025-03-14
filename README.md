@@ -68,7 +68,7 @@ This repository contains a modern Python port of the classic QBasic game **GORIL
 ## Legal & Copyright
 
 - **Original Game**  
-  The original QBasic GORILLA.BAS was released by IBM Corporation around 1991. All rights to the original artwork, naming, and code structure remain with their respective owners.  
+  The original QBasic GORILLA.BAS was released by Microsoft Corporation around 1990. All rights to the original artwork, naming, and code structure remain with their respective owners.  
 - **This Port**  
   This Python version is an **unofficial fan project** intended for educational and historical purposes. It does not imply any sponsorship or endorsement by IBM or its affiliates.
 - **Usage**  
