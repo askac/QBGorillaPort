@@ -53,7 +53,8 @@ def main():
                         angle_deg=angle_deg,
                         velocity=velocity,
                         gravity=GRAVITY,
-                        wind=WIND
+                        wind=WIND,
+                        graphics=graphics
                     )
                     bananas.append(banana)
 
@@ -70,7 +71,7 @@ def main():
 
         # Draw all bananas
         for b in bananas:
-            b.draw(screen, graphics, 'banana_left')  # EGA banana
+            b.draw(screen, 'banana_left')  # EGA banana
 
         # Debug info
         debug_text = f"Bananas: {len(bananas)} | Mode: {'EGA' if use_ega else 'CGA'}"

@@ -27,7 +27,7 @@ class Gorilla:
         self.arms_state = arms_state
         self.body_color = (139, 69, 19)  # Brownish color
         self.outline_color = (0, 0, 0)   # Black
-        self.scale = 3.0  # Scaling factor
+        self.scale = 1.0  # Scaling factor
 
     def draw(self, surface: pygame.Surface) -> None:
         """
@@ -92,3 +92,20 @@ class Gorilla:
         :param new_state: The new arms state to set.
         """
         self.arms_state = new_state
+ 
+    def victory_dance(self, surface: pygame.Surface, game_render_func, sound=None, cycles: int = 3, delay_ms: int = 200) -> None:
+        original_state = self.arms_state
+        dance_sequence = [Gorilla.LEFT_UP, Gorilla.RIGHT_UP]
+
+        for _ in range(cycles):
+            for state in dance_sequence:
+                self.set_arms_state(state)
+                game_render_func()  # 呼叫 game.render()
+                pygame.display.flip()
+                pygame.time.delay(delay_ms)
+
+        # 回復原狀
+        self.set_arms_state(Gorilla.ARMS_DOWN)
+        game_render_func()
+        pygame.display.flip()
+

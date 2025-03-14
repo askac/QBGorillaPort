@@ -6,6 +6,8 @@ Handles graphical rendering for the Gorilla game (banana with 4 orientations usi
 import math
 import pygame
 import struct
+from qbdraw import QBDraw
+from utils import SUN_COLOR, SKY_COLOR, EXPLOSION_COLOR, scl
 
 banana_ega_data = {
     "Left": [
@@ -88,64 +90,10 @@ def invert_32bits_fast(value: int) -> int:
 
     # Recombine into a single 32-bit value
     return (nb3 << 24) | (nb2 << 16) | (nb1 << 8) | nb0
-'''
-def decode_ega_okok(data_list) -> pygame.Surface:
-    bytes_le = data_list[0].to_bytes(4, byteorder='little', signed=False)
-    width, height = struct.unpack('<HH', bytes_le)    
-    print(f"Detected {width}x{height}")
-    print(f"Max pixels {8*(len(data_list)-1)}")
-    max_pixels = 8*(len(data_list)-1)
-    total_pixels = width * height
 
-    pwidth = 8 * ((width + 7) // 8) # ceil(a/b) = (a + b - 1) // b
-    lines = max_pixels // pwidth
-    print(f"PixelPerLins={pwidth}, TotalLines={lines}")
-
-    import math
-    import pygame
-
-    if total_pixels > 8*(len(data_list)-1):
-        surf = pygame.Surface((width, height))
-        surf.fill((255,0,255))  # bright magenta => invalid
-        return surf
-
-    combined_bits = 0
-    totalBits=0
-    for i in range(1,len(data_list)):
-        val_32u=invert_32bits_fast(data_list[i] & 0xffffffff)
-        combined_bits |= val_32u << totalBits
-        totalBits = totalBits + 32
-
-    for x in range(max_pixels*4):
-        b0 = 1 if (combined_bits & (1 << x)) else 0
-        print(f'{b0}',end="")
-        if((x%(pwidth*4))==((pwidth*4)-1)):
-            print("")
-
-    surf = pygame.Surface((width, height), pygame.SRCALPHA)
-    surf.fill((0,0,0,255))  #Fill blank, opacity
-
-    print(f"pixels_per_line={pwidth} width={width}")
-    for i in range(total_pixels):
-        x = i % width
-        y = i // width
-        pi = x + 4*pwidth*y
-        p0 = 1 if (combined_bits & (1 << pi)) else 0
-        p1 = 1 if (combined_bits & (1 << (pi + pwidth))) else 0
-        p2 = 1 if (combined_bits & (1 << (pi + pwidth*2))) else 0
-        p3 = 1 if (combined_bits & (1 << (pi + pwidth*3))) else 0
-        color_index = (p0 << 0) | (p1 << 1) | (p2 << 2) | (p3 << 3)
-        col = EGA_PALETTE[color_index]
-        if(0 == color_index):
-            surf.set_at((x,y), col + (0,))
-        else:
-            surf.set_at((x,y), col + (255,))
-
-    return surf
-'''
 def decode_ega(
     data_list: list[int]
-) -> pygame.Surface:
+    ) -> pygame.Surface:
     """
     Decodes EGA banana (or similar) data to a pygame.Surface using a 4-plane approach.
     1) The first 32 bits may store width/height in <HH> form, or might be other info 
@@ -262,30 +210,44 @@ class Graphics:
         #print(f"Add new banana[{key}]  wxh={w}x{h}  scale={scale_factor}")
         self.ega_surfaces[key] = decoded_surf
 
-    
     def draw_sun(self, x: int, y: int, happy: bool = True) -> None:
         """
-        Draws the sun at a given position using basic shape drawing.
-        :param x: X coordinate of sun center
-        :param y: Y coordinate of sun center
-        :param happy: If True, draws a happy mouth; otherwise draws a shocked mouth.
+        Draws the sun exactly as the original GORILLA.BAS,
+        using QBDraw methods only (assuming future support of filled circles).
+
+        :param x: X coordinate of sun center.
+        :param y: Y coordinate of sun center.
+        :param happy: True draws smiling mouth; False draws surprised mouth ("O").
         """
-        radius = 30
-        pygame.draw.circle(self.screen, self.banana_color, (x, y), radius)  # Sun as a filled circle
-        
-        # Simple eyes
-        eye_radius = 4
-        pygame.draw.circle(self.screen, self.outline_color, (x - 10, y - 10), eye_radius)
-        pygame.draw.circle(self.screen, self.outline_color, (x + 10, y - 10), eye_radius)
-        
-        # Mouth
+        drawer = QBDraw(self.screen, offset_x=x, offset_y=y, scale=1)
+
+        # Sun body (filled circle, radius=12 as original)
+        drawer.CIRCLE(0, 0, scl(12), SUN_COLOR, fill=True)
+
+        # Sun rays (lines, exactly as original)
+        drawer.LINE(-20, 0, 20, 0, SUN_COLOR)
+        drawer.LINE(0, -15, 0, 15, SUN_COLOR)
+
+        drawer.LINE(-15, -10, 15, 10, SUN_COLOR)
+        drawer.LINE(-15, 10, 15, -10, SUN_COLOR)
+
+        drawer.LINE(-8, -13, 8, 13, SUN_COLOR)
+        drawer.LINE(-8, 13, 8, -13, SUN_COLOR)
+
+        drawer.LINE(-18, -5, 18, 5, SUN_COLOR)
+        drawer.LINE(-18, 5, 18, -5, SUN_COLOR)
+
+        # Eyes (small circles in black color)
+        drawer.CIRCLE(-3, -2, 1, (0, 0, 0), fill=True)
+        drawer.CIRCLE(3, -2, 1, (0, 0, 0), fill=True)
+
+        # Mouth (smile or surprised "O")
         if happy:
-            # Smile arc
-            mouth_rect = pygame.Rect(x - 10, y - 5, 20, 10)
-            pygame.draw.arc(self.screen, self.outline_color, mouth_rect, math.pi, 2 * math.pi, 2)
+            # Smile arc (from 210° to 330°)
+            drawer.CIRCLE(0, 0, scl(8), (0, 0, 0), 7 * math.pi / 6, 11 * math.pi / 6)
         else:
-            # Shocked or "O" shaped mouth
-            pygame.draw.ellipse(self.screen, self.outline_color, (x - 5, y, 10, 15), 2)
+            # Surprised mouth ("O" filled circle)
+            drawer.CIRCLE(0, 5, scl(3), (0, 0, 0), fill=True)
     
     def draw_banana(self, x: float, y: float, key: str):
         """
@@ -298,3 +260,25 @@ class Graphics:
         surf = self.ega_surfaces.get(key)
         if surf:
             self.screen.blit(surf, (x, y))
+
+    def draw_explosion(self, x: float, y: float, radius: int = 30) -> None:
+        """
+        Draw explosion effect similar to classic GORILLA.BAS style using QBDraw methods.
+
+        :param x: Center x-coordinate of the explosion.
+        :param y: Center y-coordinate of explosion.
+        :param radius: Maximum radius of explosion circle.
+        """
+        drawer = QBDraw(self.screen, offset_x=int(x), offset_y=int(y), scale=1)
+
+        # Explosion grows outward
+        for r in range(1, radius, 2):
+            drawer.CIRCLE(0, 0, r, EXPLOSION_COLOR)
+            pygame.display.flip()
+            pygame.time.delay(20)
+
+        # Explosion shrinks inward
+        for r in reversed(range(1, radius, 2)):
+            drawer.CIRCLE(0, 0, r, SKY_COLOR)
+            pygame.display.flip()
+            pygame.time.delay(20)

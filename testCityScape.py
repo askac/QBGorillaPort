@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 import pygame
-from CityScape import CityScape
+from cityscape import CityScape
 
 def main():
     pygame.init()

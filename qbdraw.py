@@ -1,5 +1,6 @@
 import pygame
 import math
+from utils import scl
 
 class QBDraw:
     def __init__(self, surface, offset_x=0, offset_y=0, scale=1.0, line_thickness=1, point_size=1, scale_lines=True, scale_points=True):
@@ -73,7 +74,7 @@ class QBDraw:
         else:
             pygame.draw.line(self.surface, color, (x1, y1), (x2, y2), self.line_thickness)
 
-    def CIRCLE(self, x, y, radius, color, start_angle=None, end_angle=None):
+    def xxCIRCLE(self, x, y, radius, color, start_angle=None, end_angle=None):
         """Draw a circle or arc with scaling and optional angles for arcs."""
         x, y = self._scale_pos(x, y)
         radius = int(radius * self.scale)
@@ -85,6 +86,23 @@ class QBDraw:
             #pygame.draw.arc(self.surface, color, rect, -end_angle, -start_angle, self.line_thickness)
             pygame.draw.arc(self.surface, color, rect, start_angle, end_angle, self.line_thickness)
 
+    def CIRCLE(self, x, y, radius, color, start_angle=None, end_angle=None, fill=False):
+        if fill:
+            # Filled circle
+            pygame.draw.circle(self.surface, color,
+                           (self.offset_x + scl(x), self.offset_y + scl(y)),
+                           scl(radius), 0)
+        else:
+            if start_angle is None or end_angle is None:
+                # Full circle outline
+                pygame.draw.circle(self.surface, color,
+                               (self.offset_x + scl(x), self.offset_y + scl(y)), scl(radius), 1)
+            else:
+                # Arc only
+                rect = pygame.Rect(self.offset_x + scl(x - radius), self.offset_y + scl(y - radius),
+                               2*scl(radius), 2*scl(radius))
+                pygame.draw.arc(self.surface, color, rect, start_angle, end_angle, 1)
+
     def PSET(self, x, y, color):
         """Set a pixel or draw a small circle for a point with scaling."""
         x, y = self._scale_pos(x, y)
@@ -92,3 +110,4 @@ class QBDraw:
             self.surface.set_at((x, y), color)  # Single pixel
         else:
             pygame.draw.circle(self.surface, color, (x, y), self.point_size)  # Scaled size
+

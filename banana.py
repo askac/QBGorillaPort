@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 """
 Banana class for the Gorilla game.
-Manages position, velocity, angle, drawing, and basic flight updates.
+Manages position, velocity, angle, drawing, flight updates, and collision detection.
 """
 
 import math
 import pygame
 from graphics import Graphics
+from utils import meters_to_pixels, kmph_to_pixels_per_sec, SKY_COLOR, BANANA_COLOR, SUN_COLOR
 
 class Banana:
     """
@@ -18,100 +19,117 @@ class Banana:
         x: float,
         y: float,
         angle_deg: float,
-        velocity: float,
-        gravity: float,
-        wind: float,
-        rpm: float = 200.0
+        velocity_kmph: float,
+        gravity_mps2: float = 9.8,
+        wind_mps2: float = 0,
+        rpm: float = 200.0,
+        graphics=None
     ):
-        """
-        :param x: Initial X position of the banana.
-        :param y: Initial Y position of the banana.
-        :param angle_deg: Throw angle in degrees.
-        :param velocity: Initial throw velocity.
-        :param gravity: Gravity constant (e.g., 9.8).
-        :param wind: Horizontal wind force.
-        """
         self.x = x
         self.y = y
         self.angle_deg = angle_deg
-        self.velocity = velocity
-        self.gravity = gravity
-        self.wind = wind
         self.rpm = rpm
+        self.graphics = graphics
 
-        # Convert angle to radians
+        # Convert real-world units to pixels
+        gravity_px = meters_to_pixels(gravity_mps2)
+        wind_px = meters_to_pixels(wind_mps2)
+        velocity_px = kmph_to_pixels_per_sec(velocity_kmph)
+
         self.angle_rad = math.radians(angle_deg)
 
-        # Decompose velocity into X / Y components
-        self.vx = math.cos(self.angle_rad) * self.velocity
-        self.vy = -math.sin(self.angle_rad) * self.velocity  # Negative because screen y+ down
+        # Velocity components
+        self.vx = math.cos(self.angle_rad) * velocity_px
+        self.vy = -math.sin(self.angle_rad) * velocity_px
 
-        # Flight state
-        self.alive = True   # Banana will disappear when it hits ground or goes out of screen
-        self.dt_acc = 0.0      # Accumulated time used for flight
+        self.gravity = gravity_px
+        self.wind = wind_px
 
-        # For drawing the banana; we can reuse the Graphics class
-        # Typically, in a bigger architecture, we'd have a shared `Graphics` or
-        # we'd pass screen around. Here, let's store an instance or accept it in draw().
-        self.graphics = None  # We'll set it externally or handle in draw()
+        self.alive = True
+        self.dt_acc = 0.0
 
     def update(self, dt: float, screen_width: int, screen_height: int) -> None:
-        """
-        Updates the banana's position based on velocity, wind, and gravity.
-
-        :param dt: Time elapsed (seconds) since last frame/update.
-        :param screen_width: For boundary checking (width).
-        :param screen_height: For boundary checking (height).
-        """
         if not self.alive:
             return
 
-        # Accumulate time for simpler banana orientation changes
         self.dt_acc += dt
 
-        # Horizontal motion includes wind
-        # wind can be seen as an additional constant acceleration
-        # (like "ax = wind"), or a scaled effect; here's a basic approach:
-        # self.x += self.vx * dt + 0.5 * wind * (dt^2)
-        # But for simplicity, we'll just treat wind as a small horizontal acceleration:
         self.vx += self.wind * dt
         self.x += self.vx * dt
 
-        # Vertical motion includes gravity
-        # vy(t+dt) = vy(t) + gravity * dt
-        # y(t+dt) = y(t) + vy(t)*dt + 0.5*g*(dt^2)
-        # We'll do a simpler approach: y += vy*dt, then vy += g*dt
         self.y += self.vy * dt
-        self.vy += self.gravity * dt  # gravity is positive if y goes down screen
+        self.vy += self.gravity * dt
 
-        # Check if out of screen or "hit the ground"
-        # If we want the ground to be screen_height-50, we can adapt accordingly.
         if self.x < 0 or self.x > screen_width or self.y > screen_height:
             self.alive = False
 
-    def draw(self, screen, graphics, orientation=None):
-        """
-        Draws the banana using the Graphics module.
-        :param screen: The pygame surface to draw on.
-        :param graphics: The Graphics instance that handles rendering.
-        :param orientation: Optional; specifies EGA banana sprite.
-        """
+    def draw(self, screen, orientation=None):
         if not self.alive:
             return
 
         states_per_second = 4 * (self.rpm / 60.0)
         rotation_index = int(self.dt_acc * states_per_second) % 4
 
-        # Determine orientation index (CGA uses rotation index)
-        if orientation is None:
-            orientation = rotation_index % 4  # Default rotation for CGA
-            graphics.draw_banana(self.x, self.y, orientation)
-        else:
-            direction=["banana_left", "banana_up", "banana_right", "banana_down"]
-            graphics.draw_banana(self.x, self.y, direction[rotation_index])
-            #graphics.draw_banana(self.x, self.y, direction[int(self.dt_acc) % 4])
+        directions = ["banana_left", "banana_up", "banana_right", "banana_down"]
+        selected_orientation = directions[rotation_index]
 
-        #self.rotation_step = self.rotation_step % 4 + 1
-        #print(f"[{self.rotation_step}]")
-        # Draw banana using the graphics system
-        #graphics.draw_banana(self.x, self.y, orientation)
+        self.graphics.draw_banana(self.x, self.y, selected_orientation)
+
+    def XXcheck_collision(self, screen: pygame.Surface, collision_objects: list[dict]) -> str:
+        """
+        Flexible collision detection using collision objects dict list.
+
+        :param screen: Game screen surface.
+        :param collision_objects: List of dictionaries defining collision targets.
+        :return: The collided object's name, or "none".
+        """
+        check_x = int(self.x)
+        check_y = int(self.y)
+
+        screen_width, screen_height = screen.get_size()
+        #if check_x <= 0 or check_x >= screen_width or check_y >= screen_height:
+        if check_x <= 0 or check_x >= screen_width or check_y <= 0 or check_y >= screen_height:
+            self.alive = False
+            return "boundary"
+
+        color_at_pos = screen.get_at((check_x, check_y))[:3]
+
+        for obj in collision_objects:
+            rect = obj.get("rect")
+            color = obj.get("color")
+            name = obj.get("name", "unknown")
+
+            if rect.collidepoint(check_x, check_y):
+                if color:
+                    if color_at_pos == color:
+                        return name
+                else:
+                    return name
+
+        if color_at_pos not in (SKY_COLOR, BANANA_COLOR, SUN_COLOR):
+            return "building"
+
+        return "none"
+
+    def check_collision(self, collision_objects: list[dict]) -> str:
+        """
+        Simplified and reliable collision detection using rect-only collision.
+
+        :param collision_objects: List of dictionaries defining collision targets.
+        :return: The collided object's name, or "none".
+        """
+        check_point = pygame.math.Vector2(self.x, self.y)
+
+        for obj in collision_objects:
+            rect = obj.get("rect")
+            name = obj.get("name", "unknown")
+
+            if rect.collidepoint(check_point):
+                return name
+
+        # Boundary checking as fallback
+        if not pygame.display.get_surface().get_rect().collidepoint(check_point):
+            #self.alive = False
+            return "boundary"
+
+        return "none"

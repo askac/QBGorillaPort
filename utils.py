@@ -7,6 +7,62 @@ import time
 import random
 import math
 
+"""
+constants.py - Defines global constants for colors and game settings.
+"""
+
+# EGA palette (Original from QB Gorilla)
+EGA_COLORS = {
+    'BLACK': (0, 0, 0),
+    'BLUE': (0, 0, 170),
+    'GREEN': (0, 170, 0),
+    'CYAN': (0, 170, 170),
+    'RED': (170, 0, 0),
+    'MAGENTA': (170, 0, 170),
+    'BROWN': (170, 85, 0),
+    'GRAY': (170, 170, 170),
+    'DARK_GRAY': (85, 85, 85),
+    'BRIGHT_BLUE': (85, 85, 255),
+    'BRIGHT_GREEN': (85, 255, 85),
+    'BRIGHT_CYAN': (85, 255, 255),
+    'BRIGHT_RED': (255, 85, 85),
+    'BRIGHT_MAGENTA': (255, 85, 255),
+    'BRIGHT_YELLOW': (255, 255, 85),
+    'WHITE': (255, 255, 255),
+}
+
+# Color constants used in the game
+SKY_COLOR = EGA_COLORS['BLUE']
+BUILDING_COLORS = [
+    EGA_COLORS['CYAN'],
+    EGA_COLORS['RED'], 
+    EGA_COLORS['MAGENTA'], 
+    EGA_COLORS['BROWN']
+]
+GORILLA_COLOR = EGA_COLORS['BROWN']
+BANANA_COLOR = EGA_COLORS['BRIGHT_YELLOW']
+EXPLOSION_COLOR = EGA_COLORS['GREEN']
+SUN_COLOR = EGA_COLORS['BRIGHT_YELLOW']
+GROUND_COLOR = EGA_COLORS['GRAY']
+WINDOW_COLOR_LIT = EGA_COLORS['BRIGHT_YELLOW']
+WINDOW_COLOR_DARK = EGA_COLORS['DARK_GRAY']
+
+# unit conversion constants
+PIXELS_PER_METER = 30  # Adjust this as needed
+
+def meters_to_pixels(m: float) -> float:
+    """Converts meters to pixels."""
+    return m * PIXELS_PER_METER
+
+def kmph_to_mps(kmph: float) -> float:
+    """Converts velocity from kilometers per hour (km/h) to meters per second (m/s)."""
+    return kmph * (1000 / 3600)
+
+def kmph_to_pixels_per_sec(kmph: float) -> float:
+    """Converts velocity from kilometers per hour (km/h) to pixels per second."""
+    mps = kmph_to_mps(kmph)
+    return meters_to_pixels(mps)
+
 def scl(n: float) -> int:
     """
     Simplified scale function. No more CGA/EGA checks are needed.
@@ -30,12 +86,9 @@ def rest(t: float, speed_const: int = 500, mach_speed: float = 1.0) -> None:
 
 def fn_ran(x: int) -> int:
     """
-    Returns a random integer in the range [1, x].
-    
-    :param x: Upper limit for the random number.
-    :return: A random integer between 1 and x, inclusive.
+    Match QB
     """
-    return random.randint(1, x)
+    return int(random.random() * x) + 1
 
 def calc_delay() -> float:
     """
