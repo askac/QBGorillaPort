@@ -2,6 +2,8 @@
 
 This repository contains a modern Python port of the classic QBasic game **GORILLA.BAS**, originally published with MS-DOS 5.0 by Microsoft Corporation in 1990. In the spirit of preserving retro game history, this project aims to replicate the original gameplay – throwing explosive bananas between two gorillas perched on a skyline – while modernizing the code for better readability, modular design, and ease of extension.
 
+![SCREEN](https://github.com/askac/QBGorillaPort/blob/master/Screenshot%202025-03-14%20173423.png?raw=true)
+
 ## Features
 
 - **Modern Python**: Uses Python 3 (with Pygame) for graphics, sound, and input.  
